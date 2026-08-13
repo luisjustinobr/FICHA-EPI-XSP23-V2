@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ficha de EPI + OS — XSP23</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --yellow: #FFE600; --blue: #2D3277; --blue-light: #3D44A0;
+    --gray-bg: #F5F6FA; --gray-border: #D0D4E8;
+    --text: #1A1D3A; --text-muted: #6B708F;
+    --white: #ffffff; --red: #E53935; --green: #2E7D32;
+  }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--gray-bg); color: var(--text); min-height: 100vh; }
+
+  .header {
+    background: var(--blue); color: var(--white);
+    padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .logo-badge { background: var(--yellow); color: var(--blue); font-weight: 900; font-size: 10px; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; line-height: 1.4; }
+  .header h1 { font-size: 14px; font-weight: 700; }
+  .header p { font-size: 11px; opacity: 0.65; margin-top: 2px; }
+  .header-right { margin-left: auto; }
+  .btn-config { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .btn-config:hover { background: rgba(255,255,255,0.25); }
+
+  .steps-bar { background: var(--white); border-bottom: 1px solid var(--gray-border); padding: 10px 14px; display: flex; align-items: center; gap: 0; overflow-x: auto; scrollbar-width: none; }
+  .steps-bar::-webkit-scrollbar { display: none; }
+  .step-item { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .step-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--gray-border); color: var(--text-muted); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+  .step-item.active .step-dot { background: var(--blue); color: var(--white); }
+  .step-item.done .step-dot { background: var(--green); color: var(--white); }
+  .step-label { font-size: 10px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  .step-item.active .step-label { color: var(--blue); }
+  .step-item.done .step-label { color: var(--green); }
+  .step-connector { width: 18px; height: 2px; background: var(--gray-border); margin: 0 3px; flex-shrink: 0; }
+
+  .content { padding: 14px; max-width: 620px; margin: 0 auto; }
+
+  /* STATUS BAR */
+  .status-bar { display: flex; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--gray-border); border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; font-size: 11px; color: var(--text-muted); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.online { background: var(--green); }
+  .status-dot.offline { background: #F57C00; }
+  .status-dot.warn { background: #FFC107; }
+
+  .pending-bar { display: flex; align-items: center; gap: 8px; background: #FFF3E0; border: 1px solid #FFB300; border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; font-size: 11px; color: #E65100; }
+
+  /* MODAL CONFIG */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal { background: var(--white); border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { background: var(--blue); color: var(--white); padding: 14px 16px; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h2 { font-size: 14px; font-weight: 700; }
+  .btn-close { background: none; border: none; color: var(--white); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 16px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section-title { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--gray-border); padding-bottom: 4px; }
+  .colab-count { display: inline-block; background: var(--blue); color: var(--white); border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+
+  /* CARDS */
+  .card { background: var(--white); border-radius: 10px; border: 1px solid var(--gray-border); margin-bottom: 12px; overflow: hidden; }
+  .card-header { background: var(--blue); color: var(--white); padding: 11px 14px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 14px; }
+
+  /* BUSCA */
+  .search-wrap { display: flex; gap: 8px; }
+  .search-wrap input { flex: 1; border: 2px solid var(--blue); border-radius: 8px; padding: 12px 14px; font-size: 18px; font-weight: 700; color: var(--text); outline: none; letter-spacing: 2px; font-family: 'Courier New', monospace; text-transform: uppercase; }
+  .search-wrap input::placeholder { font-size: 13px; font-weight: 400; letter-spacing: 0; font-family: 'Segoe UI', Arial, sans-serif; color: var(--text-muted); }
+  .btn-buscar { background: var(--blue); color: var(--white); border: none; border-radius: 8px; padding: 12px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.2s; }
+  .btn-buscar:hover { background: var(--blue-light); }
+  .btn-buscar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* RESULTADO */
+  .colab-card { background: var(--gray-bg); border: 1px solid var(--gray-border); border-radius: 8px; padding: 14px; }
+  .colab-name { font-size: 17px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
+  .colab-meta { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .colab-epi-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+  .epi-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--blue); color: var(--white); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600; margin: 0 4px 4px 0; }
+
+  .erro-box { margin-top: 10px; background: #FFEBEE; border: 1px solid #EF9A9A; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #C62828; }
+
+  /* TERMO */
+  .termo-box { background: var(--gray-bg); border: 1px solid var(--gray-border); border-radius: 8px; padding: 12px; font-size: 11px; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 10px; }
+
+  /* CANVAS */
+  .sig-area { border: 2px dashed var(--blue); border-radius: 8px; background: #fafbff; position: relative; touch-action: none; margin-bottom: 8px; }
+  .sig-area canvas { display: block; border-radius: 6px; cursor: crosshair; }
+  .sig-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 12px; color: var(--text-muted); pointer-events: none; text-align: center; line-height: 1.5; transition: opacity 0.2s; }
+  .sig-hint.hidden { opacity: 0; }
+
+  /* BOTÕES */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; width: 100%; }
+  .btn-primary { background: var(--blue); color: var(--white); }
+  .btn-primary:hover { background: var(--blue-light); }
+  .btn-secondary { background: var(--gray-bg); color: var(--text); border: 1.5px solid var(--gray-border); }
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+  .btn-success { background: var(--green); color: var(--white); }
+  .btn-success:hover { background: #1b5e20; }
+  .btn-clear { background: none; border: 1.5px solid var(--gray-border); border-radius: 6px; padding: 5px 12px; font-size: 11px; color: var(--text-muted); cursor: pointer; font-family: inherit; }
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+  .nav-row { display: flex; justify-content: space-between; margin-top: 4px; }
+
+  /* SUCCESS */
+  .success-screen { text-align: center; padding: 28px 14px; }
+  .success-icon { font-size: 52px; margin-bottom: 14px; }
+  .success-screen h2 { font-size: 19px; color: var(--green); margin-bottom: 6px; }
+  .success-screen p { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
+  .record-id { font-size: 11px; background: var(--gray-bg); border: 1px solid var(--gray-border); border-radius: 6px; padding: 6px 12px; color: var(--text-muted); margin-bottom: 14px; display: inline-block; }
+
+  /* TEXTAREA JSON */
+  textarea { width: 100%; border: 1.5px solid var(--gray-border); border-radius: 6px; padding: 8px 10px; font-size: 11px; font-family: monospace; resize: vertical; min-height: 120px; outline: none; }
+  textarea:focus { border-color: var(--blue); }
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  input[type="text"] { width: 100%; border: 1.5px solid var(--gray-border); border-radius: 6px; padding: 9px 11px; font-size: 14px; color: var(--text); background: var(--white); outline: none; font-family: inherit; }
+  input[type="text"]:focus { border-color: var(--blue); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--white); padding: 11px 18px; border-radius: 8px; font-size: 12px; z-index: 999; transition: transform 0.3s; box-shadow: 0 4px 14px rgba(0,0,0,0.25); white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+  .toast.warning { background: #F57C00; }
+
+  .hidden { display: none !important; }
+  @media (max-width: 420px) { .search-wrap input { font-size: 15px; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-badge">Meli<br>XSP23</div>
+  <div>
+    <h1>Entrega de EPI + Ordem de Serviço</h1>
+    <p>XSP23 — Sortation Campinas</p>
+  </div>
+  <div class="header-right">
+    <button class="btn-config" onclick="abrirConfig()">⚙️ Config</button>
+  </div>
+</div>
+
+<div class="steps-bar">
+  <div class="step-item active" id="step1"><div class="step-dot">1</div><div class="step-label">Buscar</div></div>
+  <div class="step-connector" id="conn1"></div>
+  <div class="step-item" id="step2"><div class="step-dot">2</div><div class="step-label">Confirmar</div></div>
+  <div class="step-connector" id="conn2"></div>
+  <div class="step-item" id="step3"><div class="step-dot">3</div><div class="step-label">Assinar</div></div>
+  <div class="step-connector" id="conn3"></div>
+  <div class="step-item" id="step4"><div class="step-dot">✓</div><div class="step-label">Concluído</div></div>
+</div>
+
+<div class="content">
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Carregando...</span>
+  </div>
+
+  <div id="pendingBar" class="pending-bar hidden">
+    ⚠️ <span id="pendingText"></span>
+    <button class="btn-clear" style="margin-left:auto" onclick="syncPending()">Sincronizar</button>
+  </div>
+
+  <!-- SEÇÃO 1: BUSCA -->
+  <div id="section1">
+    <div class="card">
+      <div class="card-header">🔍 Buscar Colaborador</div>
+      <div class="card-body">
+        <div id="avisoSemDados" class="hidden" style="background:#FFF3E0;border:1px solid #FFB300;border-radius:8px;padding:10px 12px;font-size:12px;color:#E65100;margin-bottom:12px;">
+          ⚠️ Nenhuma base de colaboradores carregada. Clique em <strong>⚙️ Config</strong> para importar o JSON da planilha.
+        </div>
+        <label>LDAP / Matrícula</label>
+        <div class="search-wrap" style="margin-top:4px">
+          <input type="text" id="inputLdap" placeholder="Digite ou leia o crachá..." maxlength="30"
+            autocomplete="off" autocorrect="off" spellcheck="false"
+            onkeydown="if(event.key==='Enter') buscarColaborador()" style="font-size:18px;font-family:'Courier New',monospace;letter-spacing:2px;text-transform:uppercase;border:2px solid var(--blue);border-radius:8px;padding:12px 14px;">
+          <button class="btn-buscar" id="btnBuscar" onclick="buscarColaborador()">Buscar</button>
+        </div>
+
+        <div id="resultadoBusca" class="hidden" style="margin-top:12px">
+          <div class="colab-card" id="colabCard"></div>
+        </div>
+        <div id="erroBox" class="erro-box hidden" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <button class="btn btn-primary" id="btnAvancar" onclick="goToSection(2)" style="width:auto;padding:11px 26px;display:none">Confirmar e Avançar →</button>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 2: CONFIRMAÇÃO -->
+  <div id="section2" class="hidden">
+    <div class="card">
+      <div class="card-header">👤 Confirmação dos Dados</div>
+      <div class="card-body">
+        <div class="colab-card" id="colabCard2" style="margin-bottom:12px"></div>
+        <label style="margin-top:4px">Nome do Líder Responsável *</label>
+        <input type="text" id="nomeLider" placeholder="Nome do líder que está entregando o EPI" style="margin-top:4px">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">📋 Termo de Responsabilidade</div>
+      <div class="card-body">
+        <div class="termo-box">
+          <strong>RECONHEÇO</strong> ter sido orientado sobre os riscos à saúde dos eventuais agentes agressivos do meu trabalho e ter sido orientado adequadamente sobre as medidas de prevenção que devem ser seguidas.<br><br>
+          <strong>DECLARO</strong> ter recebido os Equipamentos de Proteção Individual – EPIs especificados nos termos dos artigos 166 e 167 da CLT, com a redação dada pela Lei Federal nº 6.514/77, objetivando a proteção da integridade física, bem como a neutralização de agentes insalubres conforme o art. 191, inciso II.<br><br>
+          <strong>COMPROMETO-ME</strong> a utilizá-los sempre para os fins que se destinam, estando ciente que o não uso incorrerá em comportamento inseguro, sujeitando-me às penalidades legais.<br><br>
+          <strong>RESPONSABILIZO-ME</strong> por sua guarda, conservação, uso correto, e a devolução ao SEESMT em qualquer estado que se encontre o equipamento, indenizando a empresa no caso de perda, extravio ou danos por uso incorreto (art. 462, parágrafo 1º, da CLT).<br><br>
+          <strong>Ordem de Serviço — NR 1.7-b:</strong> Declaro que recebi do EBAZAR LTDA orientações de segurança do trabalho conforme determinações da NR-01 da Portaria 3.214/78 do MTE. O não cumprimento desta ordem de serviço coloca o empregado em desacordo com a legislação em vigor, o que acarretará em sanções que podem ser: ata, advertência, suspensão ou dispensa por justa causa.
+        </div>
+      </div>
+    </div>
+    <div class="nav-row" style="margin-bottom:14px">
+      <button class="btn btn-secondary" onclick="goToSection(1)" style="width:auto;padding:11px 20px">← Voltar</button>
+      <button class="btn btn-primary" onclick="goToSection(3)" style="width:auto;padding:11px 26px">Li e confirmo →</button>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 3: ASSINATURAS -->
+  <div id="section3" class="hidden">
+    <div class="card">
+      <div class="card-header">✍️ Assinatura do Colaborador</div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Peça ao colaborador que assine abaixo com o dedo ou caneta.</p>
+        <div class="sig-area">
+          <canvas id="sigColab" height="170"></canvas>
+          <div class="sig-hint" id="hintColab">✍️ Assine aqui<br><span style="font-size:10px">Use o dedo ou caneta</span></div>
+        </div>
+        <button class="btn-clear" onclick="clearSig('sigColab','hintColab','colab')">✕ Limpar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">👷 Assinatura do Líder</div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Assinatura do líder responsável pela entrega.</p>
+        <div class="sig-area">
+          <canvas id="sigLider" height="170"></canvas>
+          <div class="sig-hint" id="hintLider">✍️ Assine aqui<br><span style="font-size:10px">Líder responsável</span></div>
+        </div>
+        <button class="btn-clear" onclick="clearSig('sigLider','hintLider','lider')">✕ Limpar</button>
+      </div>
+    </div>
+    <div class="nav-row" style="margin-bottom:14px">
+      <button class="btn btn-secondary" onclick="goToSection(2)" style="width:auto;padding:11px 20px">← Voltar</button>
+      <button class="btn btn-success" onclick="finalizar()" style="width:auto;padding:11px 26px">✓ Finalizar</button>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 4: CONCLUÍDO -->
+  <div id="section4" class="hidden">
+    <div class="card">
+      <div class="card-body">
+        <div class="success-screen">
+          <div class="success-icon">✅</div>
+          <h2>Registro Concluído!</h2>
+          <p id="successMsg"></p>
+          <div class="record-id" id="recordId"></div>
+          <div class="btn-row" style="margin-bottom:8px">
+            <button class="btn btn-primary" onclick="baixarPDF()">⬇️ Baixar PDF</button>
+            <button class="btn btn-secondary" onclick="novoRegistro()">＋ Novo</button>
+          </div>
+          <button class="btn btn-secondary" id="btnSyncManual" onclick="syncPending()" style="display:none;margin-top:4px">🔄 Sincronizar com Planilha</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- MODAL CONFIG -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="fecharConfigSeClicouFora(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⚙️ Configurações</h2>
+      <button class="btn-close" onclick="fecharConfig()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- BASE DE COLABORADORES -->
+      <div class="modal-section">
+        <div class="modal-section-title">
+          Base de Colaboradores
+          <span class="colab-count" id="colabCount">0</span>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
+          Exporte a aba <strong>Colaboradores</strong> da planilha como JSON e cole abaixo.<br>
+          Para exportar: no Sheets, vá em <strong>Extensões → Apps Script</strong> e execute a função <code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:10px">exportarJSON()</code> do script auxiliar.
+        </p>
+        <label>Cole o JSON aqui:</label>
+        <textarea id="jsonInput" placeholder='[{"matricula":"XSP001","nome":"João da Silva","funcao":"Rep de Envio 1","admissao":"2023-03-15","epis":"Bota de Segurança, Luva de Segurança"}]'></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary" onclick="importarJSON()" style="flex:1;padding:9px">✓ Importar</button>
+          <button class="btn btn-secondary" onclick="limparBase()" style="width:auto;padding:9px 14px">🗑 Limpar base</button>
+        </div>
+        <div id="jsonFeedback" style="font-size:11px;margin-top:8px;display:none"></div>
+      </div>
+
+      <!-- URL GRAVAÇÃO -->
+      <div class="modal-section">
+        <div class="modal-section-title">Envio para Planilha (opcional)</div>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.6">
+          URL do Apps Script de gravação. Se não configurada, os registros ficam salvos localmente.
+        </p>
+        <label>URL do Apps Script de gravação:</label>
+        <input type="text" id="writeUrlInput" placeholder="https://script.google.com/a/macros/..." style="margin-top:4px;font-size:12px;font-family:monospace">
+        <button class="btn btn-secondary" onclick="salvarWriteUrl()" style="margin-top:8px;width:auto;padding:8px 16px;font-size:12px">Salvar URL</button>
+        <span id="writeUrlMsg" style="font-size:10px;color:var(--green);margin-left:6px;display:none">✓ Salvo</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE
+let currentSection = 1;
+let colabData      = null;
+let sigHas         = { colab: false, lider: false };
+let pendingRecords = JSON.parse(localStorage.getItem('epiPendingV3') || '[]');
+let isOnline       = navigator.onLine;
+let colabDB        = JSON.parse(localStorage.getItem('epiColabDB') || '[]');
+const today        = new Date().toISOString().split('T')[0];
+const WRITE_KEY    = 'epiWriteUrl';
+
+// ── INIT
+window.addEventListener('load', () => {
+  atualizarStatusBar();
+  updatePendingBadge();
+  initSig('sigColab', 'hintColab', 'colab');
+  initSig('sigLider',  'hintLider',  'lider');
+  setCanvasSizes();
+  atualizarColabCount();
+  if (!colabDB.length) document.getElementById('avisoSemDados').classList.remove('hidden');
+  const wu = localStorage.getItem(WRITE_KEY) || '';
+  if (wu) document.getElementById('writeUrlInput').value = wu;
+  document.getElementById('inputLdap').focus();
+});
+window.addEventListener('online',  () => { isOnline = true;  atualizarStatusBar(); syncPending(); });
+window.addEventListener('offline', () => { isOnline = false; atualizarStatusBar(); });
+window.addEventListener('resize', setCanvasSizes);
+
+function setCanvasSizes() {
+  ['sigColab','sigLider'].forEach(id => {
+    const c = document.getElementById(id);
+    c.width = c.parentElement.clientWidth;
+  });
+}
+
+// ── STATUS BAR
+function atualizarStatusBar() {
+  const dot  = document.getElementById('statusDot');
+  const txt  = document.getElementById('statusText');
+  const n    = colabDB.length;
+  if (!n) {
+    dot.className = 'status-dot warn';
+    txt.textContent = 'Base vazia — importe o JSON em ⚙️ Config.';
+  } else if (isOnline) {
+    dot.className = 'status-dot online';
+    txt.textContent = `${n} colaborador(es) carregado(s) · Online`;
+  } else {
+    dot.className = 'status-dot offline';
+    txt.textContent = `${n} colaborador(es) carregado(s) · Offline`;
+  }
+}
+
+// ── BUSCA LOCAL
+function buscarColaborador() {
+  const ldap = document.getElementById('inputLdap').value.trim().toUpperCase();
+  if (!ldap) { showToast('Digite o LDAP ou matrícula', 'error'); return; }
+  if (!colabDB.length) {
+    document.getElementById('avisoSemDados').classList.remove('hidden');
+    showToast('Importe a base de colaboradores primeiro', 'error'); return;
+  }
+
+  document.getElementById('resultadoBusca').classList.add('hidden');
+  document.getElementById('erroBox').classList.add('hidden');
+  document.getElementById('btnAvancar').style.display = 'none';
+
+  const found = colabDB.find(c =>
+    String(c.matricula || '').trim().toUpperCase() === ldap ||
+    String(c.ldap      || '').trim().toUpperCase() === ldap
+  );
+
+  if (!found) {
+    document.getElementById('erroBox').textContent = `Matrícula/LDAP "${ldap}" não encontrado(a) na base.`;
+    document.getElementById('erroBox').classList.remove('hidden');
+    return;
+  }
+
+  colabData = found;
+  renderColabCard(found, 'colabCard');
+  document.getElementById('resultadoBusca').classList.remove('hidden');
+  document.getElementById('btnAvancar').style.display = 'inline-flex';
+}
+
+function renderColabCard(d, targetId) {
+  const episArr = (d.epis || '').split(',').map(e => e.trim()).filter(Boolean);
+  const chipsHtml = episArr.length
+    ? episArr.map(e => `<span class="epi-chip">🦺 ${e}</span>`).join('')
+    : '<span style="font-size:11px;color:var(--text-muted)">—</span>';
+  const admFormatada = d.admissao
+    ? (() => { try { return new Date(d.admissao+'T12:00:00').toLocaleDateString('pt-BR'); } catch(e){ return d.admissao; } })()
+    : '—';
+  document.getElementById(targetId).innerHTML = `
+    <div class="colab-name">${d.nome || '—'}</div>
+    <div class="colab-meta">
+      <span>🪪 ${d.matricula || d.ldap || '—'}</span>
+      <span>💼 ${d.funcao || '—'}</span>
+      <span>📅 Admissão: ${admFormatada}</span>
+    </div>
+    <div>
+      <div class="colab-epi-title">EPIs a entregar:</div>
+      ${chipsHtml}
+    </div>`;
+}
+
+// ── NAVEGAÇÃO
+function goToSection(num) {
+  if (!validar(currentSection, num)) return;
+  document.getElementById(`section${currentSection}`).classList.add('hidden');
+  currentSection = num;
+  document.getElementById(`section${currentSection}`).classList.remove('hidden');
+  updateSteps();
+  if (num === 2) renderColabCard(colabData, 'colabCard2');
+  if (num === 3) { setCanvasSizes(); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateSteps() {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById(`step${i}`);
+    el.classList.remove('active','done');
+    if (i < currentSection) el.classList.add('done');
+    else if (i === currentSection) el.classList.add('active');
+    if (i < 4) {
+      const c = document.getElementById(`conn${i}`);
+      if (c) c.style.background = i < currentSection ? 'var(--green)' : 'var(--gray-border)';
+    }
+  }
+}
+
+function validar(from, to) {
+  if (to <= from) return true;
+  if (from === 1 && !colabData) { showToast('Busque um colaborador primeiro', 'error'); return false; }
+  if (from === 2 && !document.getElementById('nomeLider').value.trim()) { showToast('Informe o nome do líder', 'error'); return false; }
+  return true;
+}
+
+// ── CANVAS
+function initSig(canvasId, hintId, key) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#1A1D3A'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let drawing = false, lx = 0, ly = 0;
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    return e.touches ? { x: e.touches[0].clientX-r.left, y: e.touches[0].clientY-r.top } : { x: e.clientX-r.left, y: e.clientY-r.top };
+  }
+  function start(e) { e.preventDefault(); drawing=true; const p=pos(e); lx=p.x; ly=p.y; document.getElementById(hintId).classList.add('hidden'); sigHas[key]=true; }
+  function move(e)  { if(!drawing) return; e.preventDefault(); const p=pos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.stroke(); lx=p.x; ly=p.y; }
+  function stop()   { drawing=false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove',  move,  {passive:false});
+  canvas.addEventListener('touchend',   stop);
+}
+
+function clearSig(canvasId, hintId, key) {
+  const c = document.getElementById(canvasId);
+  c.getContext('2d').clearRect(0,0,c.width,c.height);
+  document.getElementById(hintId).classList.remove('hidden');
+  sigHas[key] = false;
+}
+
+// ── FINALIZAR
+function finalizar() {
+  if (!sigHas.colab) { showToast('Assinatura do colaborador obrigatória', 'error'); return; }
+  if (!sigHas.lider) { showToast('Assinatura do líder obrigatória', 'error'); return; }
+  const now = new Date();
+  const id  = `EPI-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}-${(colabData.matricula||colabData.ldap||'').replace(/\s/g,'')}`;
+  const record = {
+    id, timestamp: now.toISOString(),
+    dataHora: `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`,
+    colaborador: colabData.nome    || '',
+    funcao:      colabData.funcao  || '',
+    matricula:   colabData.matricula || colabData.ldap || '',
+    admissao:    colabData.admissao || '',
+    epis:        colabData.epis    || '',
+    lider:       document.getElementById('nomeLider').value.trim(),
+    sigColab:    document.getElementById('sigColab').toDataURL(),
+    sigLider:    document.getElementById('sigLider').toDataURL(),
+  };
+  window._lastRecord = record;
+  const writeUrl = localStorage.getItem(WRITE_KEY);
+  if (isOnline && writeUrl) enviarParaSheets(record, false, writeUrl);
+  else { salvarPending(record); document.getElementById('btnSyncManual').style.display = 'block'; }
+  document.getElementById('recordId').textContent = `ID: ${id}`;
+  document.getElementById('successMsg').textContent = isOnline && writeUrl
+    ? 'Ficha de EPI e Ordem de Serviço registradas com sucesso.'
+    : 'Registro salvo localmente. Será enviado à planilha quando houver conexão.';
+  goToSection(4);
+  showToast('Registro salvo!', 'success');
+}
+
+// ── SHEETS
+async function enviarParaSheets(record, isRetry, url) {
+  const payload = { acao:'gravar_epi', id:record.id, dataHora:record.dataHora, colaborador:record.colaborador, funcao:record.funcao, matricula:record.matricula, admissao:record.admissao, epis:record.epis, lider:record.lider };
+  try {
+    await fetch(url, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    if (isRetry) { removePending(record.id); showToast('Sincronizado ✓','success'); }
+  } catch { salvarPending(record); }
+}
+
+function salvarPending(r) { if (!pendingRecords.find(x=>x.id===r.id)) { pendingRecords.push(r); localStorage.setItem('epiPendingV3', JSON.stringify(pendingRecords)); updatePendingBadge(); } }
+function removePending(id) { pendingRecords=pendingRecords.filter(r=>r.id!==id); localStorage.setItem('epiPendingV3', JSON.stringify(pendingRecords)); updatePendingBadge(); }
+async function syncPending() {
+  if (!isOnline) { showToast('Sem conexão','warning'); return; }
+  const url = localStorage.getItem(WRITE_KEY);
+  if (!url) { showToast('Configure a URL de gravação em ⚙️ Config','error'); return; }
+  if (!pendingRecords.length) { showToast('Nenhum registro pendente',''); return; }
+  showToast(`Sincronizando ${pendingRecords.length} registro(s)...`,'');
+  for (const r of [...pendingRecords]) await enviarParaSheets(r, true, url);
+}
+function updatePendingBadge() {
+  const el = document.getElementById('pendingBar');
+  document.getElementById('pendingText').textContent = `${pendingRecords.length} registro(s) aguardando envio.`;
+  pendingRecords.length ? el.classList.remove('hidden') : el.classList.add('hidden');
+}
+
+// ── CONFIG MODAL
+function abrirConfig() { document.getElementById('modalOverlay').classList.remove('hidden'); }
+function fecharConfig() { document.getElementById('modalOverlay').classList.add('hidden'); }
+function fecharConfigSeClicouFora(e) { if (e.target === document.getElementById('modalOverlay')) fecharConfig(); }
+
+function importarJSON() {
+  const raw = document.getElementById('jsonInput').value.trim();
+  const fb  = document.getElementById('jsonFeedback');
+  if (!raw) { fb.style.display='block'; fb.style.color='#C62828'; fb.textContent='Cole o JSON antes de importar.'; return; }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('O JSON deve ser um array [ {...}, {...} ]');
+    if (!parsed.length) throw new Error('O array está vazio.');
+    const primeiro = parsed[0];
+    if (!primeiro.matricula && !primeiro.ldap) throw new Error('Cada item precisa ter o campo "matricula" ou "ldap".');
+    colabDB = parsed;
+    localStorage.setItem('epiColabDB', JSON.stringify(colabDB));
+    atualizarColabCount();
+    atualizarStatusBar();
+    document.getElementById('avisoSemDados').classList.add('hidden');
+    fb.style.display='block'; fb.style.color='var(--green)';
+    fb.textContent = `✓ ${parsed.length} colaborador(es) importado(s) com sucesso.`;
+    document.getElementById('jsonInput').value = '';
+    showToast(`${parsed.length} colaboradores importados!`, 'success');
+  } catch(err) {
+    fb.style.display='block'; fb.style.color='#C62828';
+    fb.textContent = '❌ JSON inválido: ' + err.message;
+  }
+}
+
+function limparBase() {
+  if (!confirm('Limpar toda a base de colaboradores?')) return;
+  colabDB = []; localStorage.removeItem('epiColabDB');
+  atualizarColabCount(); atualizarStatusBar();
+  document.getElementById('avisoSemDados').classList.remove('hidden');
+  showToast('Base limpa','warning');
+}
+
+function atualizarColabCount() { document.getElementById('colabCount').textContent = colabDB.length; }
+
+function salvarWriteUrl() {
+  const url = document.getElementById('writeUrlInput').value.trim();
+  if (url && !url.startsWith('https://')) { showToast('URL inválida','error'); return; }
+  localStorage.setItem(WRITE_KEY, url);
+  document.getElementById('writeUrlMsg').style.display = 'inline';
+  showToast('URL salva!','success');
+}
+
+// ── PDF
+function baixarPDF() {
+  const r = window._lastRecord;
+  if (!r) { showToast('Nenhum registro para exportar','error'); return; }
+  const episChips = (r.epis||'').split(',').map(e=>e.trim()).filter(Boolean)
+    .map(e=>`<span style="background:#2D3277;color:#fff;border-radius:20px;padding:3px 9px;font-size:10px;margin-right:4px">${e}</span>`).join('');
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>EPI — ${r.colaborador}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:20px}
+    h2{text-align:center;color:#2D3277;border-bottom:2px solid #FFE600;padding-bottom:6px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;margin-bottom:14px}
+    th{background:#2D3277;color:#fff;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase}
+    td{padding:6px 8px;border-bottom:1px solid #ddd;font-size:11px;vertical-align:top}
+    .lbl{font-weight:bold;color:#666;width:30%}
+    .sig-row{display:flex;gap:40px;margin-top:20px}
+    .sig-block{flex:1;text-align:center}
+    .sig-block img{border:1px solid #ccc;border-radius:4px;width:100%;max-width:260px}
+    .sig-block p{font-size:10px;color:#555;margin-top:4px}
+    .badge{background:#FFE600;color:#2D3277;font-weight:900;font-size:10px;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:10px}
+    .termo{font-size:10px;line-height:1.6;background:#f5f5f5;padding:10px;border-radius:4px;margin-bottom:12px}
+    @media print{body{margin:8px}}
+  </style></head><body>
+  <div class="badge">MELI XSP23 — Sortation Campinas</div>
+  <h2>Ficha de Entrega de EPI + Ordem de Serviço</h2>
+  <table>
+    <tr><td class="lbl">Colaborador</td><td>${r.colaborador}</td><td class="lbl">Matrícula</td><td>${r.matricula}</td></tr>
+    <tr><td class="lbl">Função</td><td>${r.funcao}</td><td class="lbl">Admissão</td><td>${r.admissao?new Date(r.admissao+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td></tr>
+    <tr><td class="lbl">Líder / Treinador</td><td>${r.lider}</td><td class="lbl">Data / Hora</td><td>${r.dataHora}</td></tr>
+    <tr><td class="lbl">EPIs Entregues</td><td colspan="3">${episChips||'—'}</td></tr>
+    <tr><td class="lbl">ID do Registro</td><td colspan="3">${r.id}</td></tr>
+  </table>
+  <div class="termo">
+    <strong>TERMO DE RESPONSABILIDADE:</strong> RECONHEÇO ter sido orientado sobre os riscos à saúde do meu trabalho. DECLARO ter recebido os EPIs acima nos termos dos artigos 166 e 167 da CLT. COMPROMETO-ME a utilizá-los sempre para os fins que se destinam. RESPONSABILIZO-ME por sua guarda, conservação e uso correto.<br><br>
+    <strong>ORDEM DE SERVIÇO — NR 1.7-b:</strong> Declaro que recebi do EBAZAR LTDA em ${new Date(r.timestamp).toLocaleDateString('pt-BR')} orientações de segurança conforme a NR-01 da Portaria 3.214/78 do MTE.
+  </div>
+  <div class="sig-row">
+    <div class="sig-block"><img src="${r.sigColab}" alt="Assinatura Colaborador"><p><strong>${r.colaborador}</strong><br>${r.dataHora}<br>Assinatura do Colaborador</p></div>
+    <div class="sig-block"><img src="${r.sigLider}" alt="Assinatura Líder"><p><strong>${r.lider}</strong><br>${r.dataHora}<br>Assinatura do Líder / Treinador</p></div>
+  </div>
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+// ── NOVO REGISTRO
+function novoRegistro() {
+  colabData=null; sigHas={colab:false,lider:false};
+  document.getElementById('inputLdap').value='';
+  document.getElementById('nomeLider').value='';
+  document.getElementById('resultadoBusca').classList.add('hidden');
+  document.getElementById('erroBox').classList.add('hidden');
+  document.getElementById('btnAvancar').style.display='none';
+  clearSig('sigColab','hintColab','colab');
+  clearSig('sigLider','hintLider','lider');
+  document.getElementById('btnSyncManual').style.display='none';
+  window._lastRecord=null;
+  goToSection(1);
+  setTimeout(()=>document.getElementById('inputLdap').focus(),300);
+}
+
+// ── TOAST
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+(type||'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
